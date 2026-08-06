@@ -48,6 +48,8 @@ SF.uid = function() {
   return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 };
 
+SF.FORCED_API_SERVER = 'https://climb-contributor-reads-replaced.trycloudflare.com';
+
 SF.API_SERVER = window.location.protocol.startsWith('http')
   ? `${window.location.protocol}//${window.location.host}`
   : 'http://localhost:3000';
@@ -62,6 +64,9 @@ SF.getApiServerCandidates = function() {
   };
 
   const isSecurePage = window.location.protocol === 'https:';
+
+  // Prioritas utama: tunnel publik aktif agar app langsung jalan lintas internet.
+  push(SF.FORCED_API_SERVER);
 
   try {
     const params = new URLSearchParams(window.location.search || '');
@@ -80,6 +85,8 @@ SF.getApiServerCandidates = function() {
     const meta = document.querySelector('meta[name="serarah-api-server"]');
     push(meta && meta.content);
   } catch (e) {}
+
+  push(SF.FORCED_API_SERVER);
 
   push(SF.API_SERVER);
 
@@ -126,7 +133,7 @@ SF.getConfiguredApiServer = function() {
     push(meta && meta.content);
   } catch (e) {}
 
-  return values[0] || '';
+  return values[0] || SF.FORCED_API_SERVER || '';
 };
 
 SF.getPrimaryApiServer = function() {
