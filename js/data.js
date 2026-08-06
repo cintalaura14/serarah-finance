@@ -61,6 +61,8 @@ SF.getApiServerCandidates = function() {
     }
   };
 
+  const isSecurePage = window.location.protocol === 'https:';
+
   try {
     const params = new URLSearchParams(window.location.search || '');
     push(params.get('api'));
@@ -80,8 +82,12 @@ SF.getApiServerCandidates = function() {
   } catch (e) {}
 
   push(SF.API_SERVER);
-  push('http://localhost:3000');
-  push('http://127.0.0.1:3000');
+
+  // Hindari mixed-content saat website dibuka via HTTPS.
+  if (!isSecurePage) {
+    push('http://localhost:3000');
+    push('http://127.0.0.1:3000');
+  }
 
   return candidates;
 };
@@ -166,6 +172,10 @@ SF.requestJson = async function(path, options = {}, label = 'API request') {
     }
 
     return json;
+  }
+
+  if (window.location.protocol === 'https:' && String(lastError && lastError.message || '').toLowerCase().includes('failed to fetch')) {
+    throw new Error(`${label} gagal karena browser memblokir koneksi ke backend yang tidak HTTPS. Set URL backend HTTPS lewat tombol Set API.`);
   }
 
   throw lastError || new Error(`${label} failed.`);
