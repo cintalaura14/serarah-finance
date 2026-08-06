@@ -171,6 +171,7 @@ SF.configureApiServer = function() {
 };
 
 SF.requestJson = async function(path, options = {}, label = 'API request') {
+  const isPagesHost = /\.pages\.dev$/i.test(window.location.hostname || '');
   const headers = options.headers || {};
   const opts = Object.assign({ method: 'GET', headers }, options);
   const candidates = SF.getApiServerCandidates();
