@@ -1,31 +1,36 @@
-# TODO - SERARAH FINANCE
+# SERARAH FINANCE — Deployment ke Render
 
-## Fitur Selesai
-- [x] Rencana disetujui user
-- [x] Buat index.html (login + home dashboard)
-- [x] Buat css/style.css
-- [x] Buat js/data.js (data & localStorage)
-- [x] Buat js/auth.js (login/logout/session)
-- [x] Buat js/exports.js (export PDF & Excel)
-- [x] Buat js/app.js (inisialisasi & routing)
-- [x] Dashboard Master dapat diakses & bisa Approve/Reject
-- [x] Ringkasan per Divisi dapat difilter berdasarkan tanggal / keseluruhan
-- [x] Tombol "Tandai semua dibaca" / "Tandai dibaca" berfungsi (re-render)
+Kode sudah siap dan ter-deploy di GitHub (`cintalaura14/serarah-finance`).
 
-## Fitur AI (Gemini API) - Divisi Sewa, Jual, Bangun
-- [x] Hapus semua referensi AI lama dari server.js
-- [x] Implementasikan integrasi Gemini API di server.js
-- [x] Update .env dengan GEMINI_API_KEY & GEMINI_MODEL
-- [x] Update .env.example menjadi template konfigurasi Gemini
-- [x] Update deskripsi package.json ke Gemini
-- [x] Rewrite test-ai.js menjadi test Gemini API
-- [x] Hapus referensi AI lama dari TODO.md
-- [x] Hapus OCR (tesseract.js) & pdf-parse - kirim dokumen langsung ke Gemini (multimodal)
-- [x] Jalankan server + verifikasi endpoint /api/ai/extract
+Berikut yang sudah dilakukan:
+- [x] `package.json` sudah benar (script `start` → `node server.js`, engine Node >=18)
+- [x] `server.js` memakai `process.env.PORT || 3000` (sesuai kebutuhan Render)
+- [x] Frontend memakai API same-origin (`window.location.origin`) — cocok untuk Render
+- [x] Tambah `render.yaml` (blueprint konfigurasi Render)
+- [x] `.gitignore` diperbarui (jangan commit kunci API, node_modules, log, data)
+- [x] Semua perubahan di-commit dan di-push ke GitHub
 
-## Fitur AI - OpenRouter (Fallback AI)
-- [x] Tambah konfigurasi OpenRouter di .env & .env.example (OPENROUTER_API_KEY & OPENROUTER_MODEL)
-- [x] Implementasikan fungsi askOpenRouter (format OpenAI-compatible, kirim gambar/PDF sebagai base64)
-- [x] Implementasikan logika failover: coba Gemini -> jika kuota habis -> otomatis pakai OpenRouter
-- [x] Update endpoint /health menampilkan status kedua penyedia AI
-- [x] Update log server menampilkan konfigurasi Gemini + OpenRouter
+# Langkah Manual di Dashboard Render (perlu browser)
+
+1. Buka https://dashboard.render.com dan login (Google/GitHub).
+2. Klik **New** → **Web Service**.
+3. Hubungkan akun GitHub dan pilih repo `serarah-finance`.
+4. Render mendeteksi blueprint (`render.yaml`) → klik **Apply Blueprint**.
+5. Saat diminta, isi **Environment Variables / Secret Files**:
+   - `GEMINI_API_KEY`  ← **WAJIB** (kunci Google Gemini Anda).
+   - `OPENROUTER_API_KEY`  ← opsional (fallback bila kuota Gemini habis).
+   - `OPENROUTER_MODEL`, `GEMINI_MODEL`  ← sudah punya nilai bawaan.
+6. Klik **Deploy**. Tunggu build selesai.
+7. Setelah "Live", salin URL seperti:
+   - `https://serarah-finance.onrender.com`
+8. Untuk mengunggah ulang setelah update:
+   - Hubungkan ulang repo **atau** pastikan fitur **Auto-Deploy** aktif,
+   - Lalu push perubahan ke GitHub → Render build otomatis.
+
+# Cek hasil
+
+- Buka endpoint cek kesehatan:
+  `https://<url-render>/health`
+  Harus mengembalikan JSON `{"ok":true,...}`.
+- Buka root `/` → aplikasi dashboard tampil.
+
