@@ -8,7 +8,7 @@ var SF = window.SF || {};
 SF.AI_SERVER = SF.API_SERVER || (
   window.location.protocol.startsWith('http')
     ? `${window.location.protocol}//${window.location.host}`
-    : 'http://localhost:3000'
+    : ''
 );
 
 SF.ai = {
@@ -16,14 +16,12 @@ SF.ai = {
 
   // Coba deteksi apakah server AI aktif
   async checkHealth() {
-    const candidates = SF.getApiServerCandidates ? SF.getApiServerCandidates() : [SF.AI_SERVER];
-    for (const baseUrl of candidates) {
-      try {
-        const res = await fetch(baseUrl + '/health', { method: 'GET' });
-        if (res.ok) return true;
-      } catch (e) {}
+    try {
+      const res = await fetch('/health', { method: 'GET' });
+      return res.ok;
+    } catch (e) {
+      return false;
     }
-    return false;
   },
 
   // Kirim file ke server dan dapatkan data terstruktur

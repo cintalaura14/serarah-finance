@@ -1,0 +1,29 @@
+# ================================================
+# SERARAH FINANCE AI - Render Blueprint
+# Deploy via Render Dashboard atau `render.yaml`
+# ================================================
+services:
+  - type: web
+    name: serarah-finance-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.1
+      # ================================================
+      # Wajib diisi di Render Dashboard (Environment > Secret Files):
+      # GEMINI_API_KEY  -> API key Google Gemini free tier
+      # OPENROUTER_API_KEY (opsional) -> fallback ketika Gemini habis kuota
+      # ================================================
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+

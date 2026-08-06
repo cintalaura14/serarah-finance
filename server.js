@@ -19,7 +19,23 @@ const https = require('https');
 const fsp = require('fs').promises;
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+
+async function startServer() {
+  const server = HTTPS_KEY && HTTPS_CERT
+    ? https.createServer({
+      key: fs.readFileSync(HTTPS_KEY, 'utf-8'),
+      cert: fs.readFileSync(HTTPS_CERT, 'utf-8')
+    }, app).listen(PORT)
+    : app.listen(PORT);
+
+  const address = server.address();
+  const port = address && typeof address === 'object' ? address.port : PORT;
+  console.log(`SERARAH AI server running on port ${port}`);
+  console.log('Gemini Model:', GEMINI_MODEL, '| configured:', !!GEMINI_API_KEY);
+  console.log('OpenRouter Model:', OPENROUTER_MODEL, '| configured:', !!OPENROUTER_API_KEY, '| fallback aktif');
+  return { server, port };
+}
 const SSE_CLIENTS = new Set();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
@@ -42,7 +58,7 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // ---------- Middleware ----------
 app.use(express.json());
 
-// CORS sederhana agar frontend (file:// atau localhost) bisa memanggil API
+// CORS sederhana agar frontend bisa memanggil API
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.header('Access-Control-Allow-Origin', origin || '*');
@@ -341,7 +357,7 @@ async function askOpenRouter(prompt, buffer, mimetype) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
-        'HTTP-Referer': 'http://localhost:3000',
+        'HTTP-Referer': process.env.PUBLIC_APP_URL || 'https://serarah-finance.pages.dev',
         'X-Title': 'SERARAH Finance AI'
       },
       body: JSON.stringify(payload),
@@ -658,22 +674,14 @@ app.post('/api/ai/extract', upload.single('file'), async (req, res) => {
 });
 
 if (require.main === module) {
-  if (HTTPS_KEY && HTTPS_CERT) {
-    const key = fs.readFileSync(HTTPS_KEY, 'utf-8');
-    const cert = fs.readFileSync(HTTPS_CERT, 'utf-8');
-    https.createServer({ key, cert }, app).listen(PORT, () => {
-      console.log('SERARAH AI server running on https://localhost:' + PORT);
-      console.log('Gemini Model:', GEMINI_MODEL, '| configured:', !!GEMINI_API_KEY);
-      console.log('OpenRouter Model:', OPENROUTER_MODEL, '| configured:', !!OPENROUTER_API_KEY, '| fallback aktif');
-    });
-  } else {
-    app.listen(PORT, () => {
-      console.log('SERARAH AI server running on http://localhost:' + PORT);
-      console.log('Gemini Model:', GEMINI_MODEL, '| configured:', !!GEMINI_API_KEY);
-      console.log('OpenRouter Model:', OPENROUTER_MODEL, '| configured:', !!OPENROUTER_API_KEY, '| fallback aktif');
-    });
-  }
+  startServer().catch((err) => {
+    console.error('Gagal menjalankan server:', err);
+    process.exit(1);
+  });
 }
 
+app.startServer = startServer;
+
 module.exports = app;
+module.exports.startServer = startServer;
 

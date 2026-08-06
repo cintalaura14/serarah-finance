@@ -7,7 +7,7 @@ child.stderr.on('data', d => console.error('STDERR:', d.toString()));
 (async () => {
   await new Promise(r => setTimeout(r, 4000));
   try {
-    const h = await fetch('http://localhost:3000/health', { method: 'GET' });
+    const h = await fetch('http://127.0.0.1:3000/health', { method: 'GET' });
     const j = await h.json();
     console.log('=== /health ===');
     console.log('Status:', h.status);

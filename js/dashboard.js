@@ -37,7 +37,6 @@ SF.topbar = function(user) {
     <div class="app-topbar">
       <div class="brand">SERARAH <span>FINANCE</span></div>
       <div class="topbar-right">
-        <button class="btn btn-sm btn-ghost" onclick="SF.configureApiServer()">Set API</button>
         <span class="user-chip">${SF.iconHtml('user')} ${SF.roleName(user.role)} (${user.username})</span>
         <button class="btn btn-sm btn-ghost" onclick="SF.logout()">Keluar</button>
       </div>
@@ -314,7 +313,6 @@ let masterCards = '';
       <div class="home-hero">
         <h1>Selamat datang di SERARAH FINANCE</h1>
         <p>Pilih divisi untuk mengakses dashboard Anda. ${user.role === 'master' ? 'Anda login sebagai Master dengan akses penuh.' : 'Anda hanya dapat mengakses divisi Anda sendiri.'}</p>
-        <p style="margin-top:10px;font-size:13px;opacity:.8;">Backend API aktif: ${SF.getStoredApiServer() || SF.API_SERVER || 'otomatis'}</p>
       </div>
       ${masterCards}
       <div class="cards-section">

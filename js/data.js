@@ -48,92 +48,20 @@ SF.uid = function() {
   return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 };
 
-SF.FORCED_API_SERVER = 'https://climb-contributor-reads-replaced.trycloudflare.com';
+SF.FORCED_API_SERVER = '';
 
-SF.API_SERVER = window.location.protocol.startsWith('http')
-  ? `${window.location.protocol}//${window.location.host}`
-  : 'http://localhost:3000';
+SF.API_SERVER = window.location.origin || '';
 
 SF.getApiServerCandidates = function() {
-  const candidates = [];
-  const push = (value) => {
-    const normalized = String(value || '').trim().replace(/\/$/, '');
-    if (normalized && !candidates.includes(normalized)) {
-      candidates.push(normalized);
-    }
-  };
-
-  const isSecurePage = window.location.protocol === 'https:';
-
-  // Prioritas utama: tunnel publik aktif agar app langsung jalan lintas internet.
-  push(SF.FORCED_API_SERVER);
-
-  try {
-    const params = new URLSearchParams(window.location.search || '');
-    push(params.get('api'));
-  } catch (e) {}
-
-  try {
-    push(window.SF_API_SERVER);
-  } catch (e) {}
-
-  try {
-    push(localStorage.getItem('serarah_api_server'));
-  } catch (e) {}
-
-  try {
-    const meta = document.querySelector('meta[name="serarah-api-server"]');
-    push(meta && meta.content);
-  } catch (e) {}
-
-  push(SF.FORCED_API_SERVER);
-
-  push(SF.API_SERVER);
-
-  // Hindari mixed-content saat website dibuka via HTTPS.
-  if (!isSecurePage) {
-    push('http://localhost:3000');
-    push('http://127.0.0.1:3000');
-  }
-
-  return candidates;
+  return SF.API_SERVER ? [SF.API_SERVER] : [];
 };
 
 SF.getStoredApiServer = function() {
-  try {
-    const value = localStorage.getItem('serarah_api_server');
-    return String(value || '').trim().replace(/\/$/, '');
-  } catch (e) {
-    return '';
-  }
+  return '';
 };
 
 SF.getConfiguredApiServer = function() {
-  const values = [];
-  const push = (value) => {
-    const normalized = String(value || '').trim().replace(/\/$/, '');
-    if (normalized && !values.includes(normalized)) {
-      values.push(normalized);
-    }
-  };
-
-  try {
-    const params = new URLSearchParams(window.location.search || '');
-    push(params.get('api'));
-  } catch (e) {}
-
-  try {
-    push(window.SF_API_SERVER);
-  } catch (e) {}
-
-  push(SF.getStoredApiServer());
-
-  try {
-    const meta = document.querySelector('meta[name="serarah-api-server"]');
-    push(meta && meta.content);
-  } catch (e) {}
-
-  return values[0] || SF.FORCED_API_SERVER || '';
+  return SF.API_SERVER || SF.FORCED_API_SERVER || '';
 };
 
 SF.getPrimaryApiServer = function() {
@@ -141,98 +69,44 @@ SF.getPrimaryApiServer = function() {
 };
 
 SF.setStoredApiServer = function(value) {
-  const normalized = String(value || '').trim().replace(/\/$/, '');
-  try {
-    if (normalized) {
-      localStorage.setItem('serarah_api_server', normalized);
-    } else {
-      localStorage.removeItem('serarah_api_server');
-    }
-  } catch (e) {}
-
   if (typeof SF.refreshRealtimeConnection === 'function') {
     SF.refreshRealtimeConnection();
   }
 
-  return normalized;
+  return SF.getConfiguredApiServer();
 };
 
 SF.configureApiServer = function() {
-  const current = SF.getStoredApiServer() || SF.API_SERVER || 'http://localhost:3000';
-  const value = window.prompt(
-    'Masukkan URL backend API SERARAH. Contoh: https://api.domain-anda.com atau http://localhost:3000',
-    current
-  );
-  if (value === null) return current;
-
-  const saved = SF.setStoredApiServer(value);
-  if (saved) {
-    alert('URL API disimpan: ' + saved);
-  } else {
-    alert('URL API dihapus. Aplikasi akan kembali memakai deteksi otomatis.');
-  }
-  return saved || current;
+  return SF.getConfiguredApiServer();
 };
 
 SF.bootstrapApiServerConfig = function() {
-  try {
-    const params = new URLSearchParams(window.location.search || '');
-    const fromQuery = String(params.get('api') || '').trim();
-    if (fromQuery) {
-      SF.setStoredApiServer(fromQuery);
-    }
-  } catch (e) {}
+  return SF.getConfiguredApiServer();
 };
 
 SF.requestJson = async function(path, options = {}, label = 'API request') {
   const headers = options.headers || {};
   const opts = Object.assign({ method: 'GET', headers }, options);
-  const candidates = SF.getApiServerCandidates();
-  let lastError = null;
+  const res = await fetch(path, opts);
+  const text = await res.text();
+  const trimmed = text.trim();
 
-  for (const baseUrl of candidates) {
-    let res;
-    try {
-      res = await fetch(`${baseUrl}${path}`, opts);
-    } catch (err) {
-      lastError = err;
-      continue;
-    }
-
-    const text = await res.text();
-    const trimmed = text.trim();
-
-    if (!trimmed) {
-      lastError = new Error(`${label} returned an empty response (${res.status}) from ${baseUrl}${path}.`);
-      if (res.status === 404 || res.status === 405 || res.status === 500 || res.status === 502 || res.status === 503) {
-        continue;
-      }
-      throw lastError;
-    }
-
-    let json;
-    try {
-      json = JSON.parse(trimmed);
-    } catch (err) {
-      lastError = new Error(`${label} returned non-JSON response (${res.status}) from ${baseUrl}${path}: ${trimmed.slice(0, 200)}`);
-      if (res.status === 404 || res.status === 405 || res.status === 500 || res.status === 502 || res.status === 503) {
-        continue;
-      }
-      throw lastError;
-    }
-
-    if (!res.ok) {
-      throw new Error(json.message || `${label} failed (${res.status}).`);
-    }
-
-    return json;
+  if (!trimmed) {
+    throw new Error(`${label} returned an empty response (${res.status}).`);
   }
 
-  if (window.location.protocol === 'https:' && String(lastError && lastError.message || '').toLowerCase().includes('failed to fetch')) {
-    throw new Error(`${label} gagal karena browser memblokir koneksi ke backend yang tidak HTTPS. Set URL backend HTTPS lewat tombol Set API.`);
+  let json;
+  try {
+    json = JSON.parse(trimmed);
+  } catch (err) {
+    throw new Error(`${label} returned non-JSON response (${res.status}): ${trimmed.slice(0, 200)}`);
   }
 
-  throw lastError || new Error(`${label} failed.`);
+  if (!res.ok) {
+    throw new Error(json.message || `${label} failed (${res.status}).`);
+  }
+
+  return json;
 };
 
 SF.apiRequest = async function(path, options = {}) {

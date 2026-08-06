@@ -1,4 +1,5 @@
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const request = require('supertest');
 const { expect } = require('chai');
@@ -6,7 +7,19 @@ const { expect } = require('chai');
 process.env.DATA_DIR = 'test-data';
 process.env.UPLOAD_DIR = 'test-uploads';
 
+global.window = {
+  location: { protocol: 'https:', host: 'example.test', origin: 'https://example.test', search: '' },
+  SF: {}
+};
+global.document = {
+  querySelector: () => null
+};
+
+global.SF = global.window.SF;
+
 const app = require('../server');
+require('../js/data');
+const SF = global.window.SF;
 
 const dataDir = path.join(__dirname, '..', 'test-data');
 const storeFile = path.join(dataDir, 'store.json');
@@ -37,6 +50,11 @@ after(() => {
 
 describe('API Transactions & Notifications', () => {
   beforeEach(() => resetStore());
+
+  it('should use the current origin as the API server', () => {
+    const candidates = SF.getApiServerCandidates();
+    expect(candidates).to.deep.equal(['https://example.test']);
+  });
 
   it('should expose a real-time event stream endpoint', async () => {
     const server = app.listen(0);
