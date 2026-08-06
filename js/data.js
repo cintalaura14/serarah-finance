@@ -104,6 +104,38 @@ SF.getStoredApiServer = function() {
   }
 };
 
+SF.getConfiguredApiServer = function() {
+  const values = [];
+  const push = (value) => {
+    const normalized = String(value || '').trim().replace(/\/$/, '');
+    if (normalized && !values.includes(normalized)) {
+      values.push(normalized);
+    }
+  };
+
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    push(params.get('api'));
+  } catch (e) {}
+
+  try {
+    push(window.SF_API_SERVER);
+  } catch (e) {}
+
+  push(SF.getStoredApiServer());
+
+  try {
+    const meta = document.querySelector('meta[name="serarah-api-server"]');
+    push(meta && meta.content);
+  } catch (e) {}
+
+  return values[0] || '';
+};
+
+SF.getPrimaryApiServer = function() {
+  return SF.getConfiguredApiServer();
+};
+
 SF.setStoredApiServer = function(value) {
   const normalized = String(value || '').trim().replace(/\/$/, '');
   try {
@@ -113,6 +145,11 @@ SF.setStoredApiServer = function(value) {
       localStorage.removeItem('serarah_api_server');
     }
   } catch (e) {}
+
+  if (typeof SF.refreshRealtimeConnection === 'function') {
+    SF.refreshRealtimeConnection();
+  }
+
   return normalized;
 };
 
@@ -234,6 +271,25 @@ SF.realtime = {
   reconnectDelay: 1000
 };
 
+SF.stopRealtime = function() {
+  if (SF.realtime.reconnectTimer) {
+    clearTimeout(SF.realtime.reconnectTimer);
+    SF.realtime.reconnectTimer = null;
+  }
+
+  if (SF.realtime.eventSource) {
+    try {
+      SF.realtime.eventSource.close();
+    } catch (e) {}
+    SF.realtime.eventSource = null;
+  }
+};
+
+SF.refreshRealtimeConnection = function() {
+  SF.stopRealtime();
+  SF.connectRealtime();
+};
+
 SF.handleRealtimeEvent = async function(payload) {
   const user = SF.session.currentUser();
   if (!user) return;
@@ -251,7 +307,9 @@ SF.handleRealtimeEvent = async function(payload) {
 
 SF.connectRealtime = function() {
   if (typeof window.EventSource === 'undefined' || SF.realtime.eventSource) return;
-  const url = `${SF.API_SERVER}/api/events`;
+  const baseUrl = SF.getPrimaryApiServer();
+  if (!baseUrl) return;
+  const url = `${baseUrl}/api/events`;
   try {
     const es = new EventSource(url);
     SF.realtime.eventSource = es;
@@ -274,9 +332,14 @@ SF.connectRealtime = function() {
 
     es.onerror = function() {
       if (SF.realtime.reconnectTimer) return;
+
+      try {
+        es.close();
+      } catch (e) {}
+      SF.realtime.eventSource = null;
+
       SF.realtime.reconnectTimer = setTimeout(() => {
         SF.realtime.reconnectTimer = null;
-        SF.realtime.eventSource = null;
         SF.connectRealtime();
       }, SF.realtime.reconnectDelay);
     };
