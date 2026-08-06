@@ -16,23 +16,24 @@ SF.ai = {
 
   // Coba deteksi apakah server AI aktif
   async checkHealth() {
-    try {
-      const res = await fetch(SF.AI_SERVER + '/health', { method: 'GET' });
-      return res.ok;
-    } catch (e) {
-      return false;
+    const candidates = SF.getApiServerCandidates ? SF.getApiServerCandidates() : [SF.AI_SERVER];
+    for (const baseUrl of candidates) {
+      try {
+        const res = await fetch(baseUrl + '/health', { method: 'GET' });
+        if (res.ok) return true;
+      } catch (e) {}
     }
+    return false;
   },
 
   // Kirim file ke server dan dapatkan data terstruktur
   async extract(file) {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(SF.AI_SERVER + '/api/ai/extract', {
+    const json = await SF.requestJson('/api/ai/extract', {
       method: 'POST',
       body: fd
-    });
-    const json = await SF.readJsonResponse(res, 'AI extract');
+    }, 'AI extract');
     if (!json.ok) {
       throw new Error(json.message || 'Gagal memproses dokumen.');
     }

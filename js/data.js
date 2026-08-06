@@ -52,16 +52,85 @@ SF.API_SERVER = window.location.protocol.startsWith('http')
   ? `${window.location.protocol}//${window.location.host}`
   : 'http://localhost:3000';
 
+SF.getApiServerCandidates = function() {
+  const candidates = [];
+  const push = (value) => {
+    const normalized = String(value || '').trim().replace(/\/$/, '');
+    if (normalized && !candidates.includes(normalized)) {
+      candidates.push(normalized);
+    }
+  };
+
+  try {
+    push(window.SF_API_SERVER);
+  } catch (e) {}
+
+  try {
+    push(localStorage.getItem('serarah_api_server'));
+  } catch (e) {}
+
+  try {
+    const meta = document.querySelector('meta[name="serarah-api-server"]');
+    push(meta && meta.content);
+  } catch (e) {}
+
+  push(SF.API_SERVER);
+  push('http://localhost:3000');
+  push('http://127.0.0.1:3000');
+
+  return candidates;
+};
+
+SF.requestJson = async function(path, options = {}, label = 'API request') {
+  const headers = options.headers || {};
+  const opts = Object.assign({ method: 'GET', headers }, options);
+  const candidates = SF.getApiServerCandidates();
+  let lastError = null;
+
+  for (const baseUrl of candidates) {
+    let res;
+    try {
+      res = await fetch(`${baseUrl}${path}`, opts);
+    } catch (err) {
+      lastError = err;
+      continue;
+    }
+
+    const text = await res.text();
+    const trimmed = text.trim();
+
+    if (!trimmed) {
+      lastError = new Error(`${label} returned an empty response (${res.status}) from ${baseUrl}${path}.`);
+      if (res.status === 404 || res.status === 405 || res.status === 500 || res.status === 502 || res.status === 503) {
+        continue;
+      }
+      throw lastError;
+    }
+
+    let json;
+    try {
+      json = JSON.parse(trimmed);
+    } catch (err) {
+      lastError = new Error(`${label} returned non-JSON response (${res.status}) from ${baseUrl}${path}: ${trimmed.slice(0, 200)}`);
+      if (res.status === 404 || res.status === 405 || res.status === 500 || res.status === 502 || res.status === 503) {
+        continue;
+      }
+      throw lastError;
+    }
+
+    if (!res.ok) {
+      throw new Error(json.message || `${label} failed (${res.status}).`);
+    }
+
+    return json;
+  }
+
+  throw lastError || new Error(`${label} failed.`);
+};
+
 SF.apiRequest = async function(path, options = {}) {
   try {
-    const headers = options.headers || {};
-    const opts = Object.assign({ method: 'GET', headers }, options);
-    const res = await fetch(`${SF.API_SERVER}${path}`, opts);
-    const json = await SF.readJsonResponse(res, `API ${path}`);
-    if (!res.ok) {
-      throw new Error(json.message || `API request failed ${res.status}`);
-    }
-    return json;
+    return await SF.requestJson(path, options, `API ${path}`);
   } catch (err) {
     console.warn('[API]', path, err.message);
     return { ok: false, error: err };
@@ -161,12 +230,10 @@ SF.uploadAttachment = async function(file) {
   try {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${SF.API_SERVER}/api/upload`, {
+    const json = await SF.requestJson('/api/upload', {
       method: 'POST',
       body: form
-    });
-    const json = await SF.readJsonResponse(res, 'Upload attachment');
-    if (!res.ok) throw new Error(json.message || 'Upload gagal');
+    }, 'Upload attachment');
     return json;
   } catch (err) {
     console.warn('[API upload]', err.message);
