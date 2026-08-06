@@ -62,6 +62,11 @@ SF.getApiServerCandidates = function() {
   };
 
   try {
+    const params = new URLSearchParams(window.location.search || '');
+    push(params.get('api'));
+  } catch (e) {}
+
+  try {
     push(window.SF_API_SERVER);
   } catch (e) {}
 
@@ -79,6 +84,44 @@ SF.getApiServerCandidates = function() {
   push('http://127.0.0.1:3000');
 
   return candidates;
+};
+
+SF.getStoredApiServer = function() {
+  try {
+    const value = localStorage.getItem('serarah_api_server');
+    return String(value || '').trim().replace(/\/$/, '');
+  } catch (e) {
+    return '';
+  }
+};
+
+SF.setStoredApiServer = function(value) {
+  const normalized = String(value || '').trim().replace(/\/$/, '');
+  try {
+    if (normalized) {
+      localStorage.setItem('serarah_api_server', normalized);
+    } else {
+      localStorage.removeItem('serarah_api_server');
+    }
+  } catch (e) {}
+  return normalized;
+};
+
+SF.configureApiServer = function() {
+  const current = SF.getStoredApiServer() || SF.API_SERVER || 'http://localhost:3000';
+  const value = window.prompt(
+    'Masukkan URL backend API SERARAH. Contoh: https://api.domain-anda.com atau http://localhost:3000',
+    current
+  );
+  if (value === null) return current;
+
+  const saved = SF.setStoredApiServer(value);
+  if (saved) {
+    alert('URL API disimpan: ' + saved);
+  } else {
+    alert('URL API dihapus. Aplikasi akan kembali memakai deteksi otomatis.');
+  }
+  return saved || current;
 };
 
 SF.requestJson = async function(path, options = {}, label = 'API request') {
