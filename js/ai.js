@@ -32,7 +32,7 @@ SF.ai = {
       method: 'POST',
       body: fd
     });
-    const json = await res.json();
+    const json = await SF.readJsonResponse(res, 'AI extract');
     if (!json.ok) {
       throw new Error(json.message || 'Gagal memproses dokumen.');
     }

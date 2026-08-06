@@ -57,7 +57,7 @@ SF.apiRequest = async function(path, options = {}) {
     const headers = options.headers || {};
     const opts = Object.assign({ method: 'GET', headers }, options);
     const res = await fetch(`${SF.API_SERVER}${path}`, opts);
-    const json = await res.json();
+    const json = await SF.readJsonResponse(res, `API ${path}`);
     if (!res.ok) {
       throw new Error(json.message || `API request failed ${res.status}`);
     }
@@ -65,6 +65,19 @@ SF.apiRequest = async function(path, options = {}) {
   } catch (err) {
     console.warn('[API]', path, err.message);
     return { ok: false, error: err };
+  }
+};
+
+SF.readJsonResponse = async function(res, label = 'Response') {
+  const text = await res.text();
+  if (!text || !text.trim()) {
+    throw new Error(`${label} returned an empty response (${res.status}).`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`${label} returned non-JSON response (${res.status}): ${text.slice(0, 200)}`);
   }
 };
 
@@ -152,7 +165,7 @@ SF.uploadAttachment = async function(file) {
       method: 'POST',
       body: form
     });
-    const json = await res.json();
+    const json = await SF.readJsonResponse(res, 'Upload attachment');
     if (!res.ok) throw new Error(json.message || 'Upload gagal');
     return json;
   } catch (err) {
