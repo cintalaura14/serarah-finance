@@ -62,6 +62,9 @@ SF.refreshCurrentView = async function() {
 };
 
 window.addEventListener('load', () => {
+  if (typeof SF.bootstrapApiServerConfig === 'function') {
+    SF.bootstrapApiServerConfig();
+  }
   SF.router();
   SF.connectRealtime();
 });

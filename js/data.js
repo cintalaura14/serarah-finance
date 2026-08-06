@@ -170,6 +170,16 @@ SF.configureApiServer = function() {
   return saved || current;
 };
 
+SF.bootstrapApiServerConfig = function() {
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    const fromQuery = String(params.get('api') || '').trim();
+    if (fromQuery) {
+      SF.setStoredApiServer(fromQuery);
+    }
+  } catch (e) {}
+};
+
 SF.requestJson = async function(path, options = {}, label = 'API request') {
   const isPagesHost = /\.pages\.dev$/i.test(window.location.hostname || '');
   const configuredApiServer = SF.getConfiguredApiServer();
