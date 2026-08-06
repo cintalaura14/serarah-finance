@@ -172,6 +172,7 @@ SF.configureApiServer = function() {
 
 SF.requestJson = async function(path, options = {}, label = 'API request') {
   const isPagesHost = /\.pages\.dev$/i.test(window.location.hostname || '');
+  const configuredApiServer = SF.getConfiguredApiServer();
   const headers = options.headers || {};
   const opts = Object.assign({ method: 'GET', headers }, options);
   const candidates = SF.getApiServerCandidates();
@@ -219,7 +220,7 @@ SF.requestJson = async function(path, options = {}, label = 'API request') {
     throw new Error(`${label} gagal karena browser memblokir koneksi ke backend yang tidak HTTPS. Set URL backend HTTPS lewat tombol Set API.`);
   }
 
-  if (isPagesHost && !SF.getStoredApiServer()) {
+  if (isPagesHost && !configuredApiServer) {
     throw new Error(`${label} belum punya URL backend API. Host pages.dev ini hanya frontend statis, jadi isi URL backend HTTPS lewat tombol Set API.`);
   }
 
