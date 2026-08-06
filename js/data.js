@@ -62,6 +62,7 @@ SF.getApiServerCandidates = function() {
   };
 
   const isSecurePage = window.location.protocol === 'https:';
+  const isPagesHost = /\.pages\.dev$/i.test(window.location.hostname || '');
 
   try {
     const params = new URLSearchParams(window.location.search || '');
@@ -81,7 +82,9 @@ SF.getApiServerCandidates = function() {
     push(meta && meta.content);
   } catch (e) {}
 
-  push(SF.API_SERVER);
+  if (!isPagesHost) {
+    push(SF.API_SERVER);
+  }
 
   // Hindari mixed-content saat website dibuka via HTTPS.
   if (!isSecurePage) {
@@ -176,6 +179,10 @@ SF.requestJson = async function(path, options = {}, label = 'API request') {
 
   if (window.location.protocol === 'https:' && String(lastError && lastError.message || '').toLowerCase().includes('failed to fetch')) {
     throw new Error(`${label} gagal karena browser memblokir koneksi ke backend yang tidak HTTPS. Set URL backend HTTPS lewat tombol Set API.`);
+  }
+
+  if (isPagesHost && !SF.getStoredApiServer()) {
+    throw new Error(`${label} belum punya URL backend API. Host pages.dev ini hanya frontend statis, jadi isi URL backend HTTPS lewat tombol Set API.`);
   }
 
   throw lastError || new Error(`${label} failed.`);
